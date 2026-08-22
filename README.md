@@ -18,8 +18,7 @@ PMPP-to-AI-Systems/
 ├── PPMP/CH02/                # 《PMPP》第 2 章配套代码：向量逐元素乘法
 │   ├── vecMul.cu                    # CUDA 核函数实现
 │   ├── vecMulTorchTensor.cu        # 自定义 CUDA 核函数扩展 PyTorch Tensor
-│   ├── vecMul.py                   # 纯 Python 循环 vs CUDA 扩展的性能对照
-│   ├── Makefile                    # Linux 一键编译运行（nvcc）
+│   └── vecMul.py                   # 纯 Python 循环 vs CUDA 扩展的性能对照
 ├── README.md                 # 本文件：仓库说明 + 学习计划
 └── README_offcial.md         # 参考资料：GPU 100 days 挑战学习日志（来源见下）
 ```
@@ -64,8 +63,8 @@ PMPP-to-AI-Systems/
 # 每日一练
 nvcc -o vectAdd "Daily/day 01/vectAdd.cu" && ./vectAdd
 
-# CH02 配套代码（或直接使用 Makefile）
-cd PPMP/CH02 && make
+# CH02 配套代码
+cd PPMP/CH02 && nvcc -o vecMul vecMul.cu && ./vecMul
 ```
 
 ### Python 性能对照（vecMul.py）
