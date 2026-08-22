@@ -20,7 +20,6 @@ PMPP-to-AI-Systems/
 │   ├── vecMulTorchTensor.cu        # 自定义 CUDA 核函数扩展 PyTorch Tensor
 │   ├── vecMul.py                   # 纯 Python 循环 vs CUDA 扩展的性能对照
 │   ├── Makefile                    # Linux 一键编译运行（nvcc）
-│   └── run.ps1                     # Windows 一键运行（MSVC + uv）
 ├── README.md                 # 本文件：仓库说明 + 学习计划
 └── README_offcial.md         # 参考资料：GPU 100 days 挑战学习日志（来源见下）
 ```
@@ -69,13 +68,13 @@ nvcc -o vectAdd "Daily/day 01/vectAdd.cu" && ./vectAdd
 cd PPMP/CH02 && make
 ```
 
-### Windows 一键运行（PPMP/CH02）
+### Python 性能对照（vecMul.py）
 
-需要 **MSVC 2022** 与 [uv](https://docs.astral.sh/uv/)（用于管理 torch 环境）：
+`vecMul.py` 对比纯 Python 循环与 CUDA 扩展的性能，需 CUDA 版 PyTorch：
 
-```powershell
+```bash
 cd PPMP/CH02
-.\run.ps1   # 自动加载 vcvars64 环境并以 uv 运行 vecMul.py
+uv run python vecMul.py
 ```
 
 ---
