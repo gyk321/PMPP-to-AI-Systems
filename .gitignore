@@ -1,0 +1,45 @@
+# CUDA build artifacts
+*.o
+*.obj
+*.exe
+*.out
+*.lib
+*.exp
+*.ptx
+*.cubin
+*.fatbin
+*.cu.o
+*.d
+
+# Build directories
+build/
+bin/
+obj/
+out/
+
+# IDE / Editor
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Dependencies
+*.dll
+*.so
+*.dylib
+
+# Python virtual environment
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Claude Code local settings
+.claude/
