@@ -15,10 +15,14 @@ PMPP-to-AI-Systems/
 │   ├── day 02/MatrixAdd.cu         # 矩阵加法：2D 线程索引映射
 │   ├── day 03/Matrix_vec_mult.cu   # 矩阵 × 向量：shared memory 优化
 │   └── day 04/partialSum.cu        # 部分和规约：动态共享内存 + stride 循环
-├── PPMP/CH02/                # 《PMPP》第 2 章配套代码：向量逐元素乘法
-│   ├── vecMul.cu                    # CUDA 核函数实现
-│   ├── vecMulTorchTensor.cu        # 自定义 CUDA 核函数扩展 PyTorch Tensor
-│   └── vecMul.py                   # 纯 Python 循环 vs CUDA 扩展的性能对照
+├── PPMP/                       # 《PMPP》配套代码
+│   ├── CH02/                          # 第 2 章：向量逐元素乘法
+│   │   ├── vecMul.cu                  # CUDA 核函数实现
+│   │   ├── vecMulTorchTensor.cu       # 自定义 CUDA 核函数扩展 PyTorch Tensor
+│   │   ├── vecMul.py                  # 纯 Python 循环 vs CUDA 扩展的性能对照
+│   │   └── Makefile                   # 编译/运行命令 (make run / make python)
+│   ├── pyproject.toml                 # uv 项目定义 (Python 依赖：torch CUDA 版等)
+│   └── uv.lock                        # uv 依赖锁定文件
 ├── README.md                 # 本文件：仓库说明 + 学习计划
 └── README_offcial.md         # 参考资料：GPU 100 days 挑战学习日志（来源见下）
 ```
@@ -57,23 +61,30 @@ PMPP-to-AI-Systems/
 
 ## 运行方式
 
-### CUDA 程序（Linux）
+> **Windows 提示**：nvcc 编译 CUDA 代码、PyTorch 的 `load_inline` 编译 CUDA 扩展，都需要 MSVC 的
+> `cl.exe`。请在 **"x64 Native Tools Command Prompt for VS 2022"**（开始菜单 → Visual Studio 2022）
+> 中运行下面的命令，或先执行 `vcvars64.bat` 初始化 MSVC 环境。Linux 无需此步。
+
+### CUDA 程序
 
 ```bash
 # 每日一练
 nvcc -o vectAdd "Daily/day 01/vectAdd.cu" && ./vectAdd
 
 # CH02 配套代码
-cd PPMP/CH02 && nvcc -o vecMul vecMul.cu && ./vecMul
+cd PPMP/CH02 && nvcc -o vecMul vecMul.cu && .\vecMul
 ```
+
+> 注：`.\vecMul` 是 Windows 写法（cmd / 开发者命令提示符）；Linux / Git Bash 下改为 `./vecMul`。
 
 ### Python 性能对照（vecMul.py）
 
-`vecMul.py` 对比纯 Python 循环与 CUDA 扩展的性能，需 CUDA 版 PyTorch：
+`vecMul.py` 对比纯 Python 循环与 CUDA 扩展的性能，需 CUDA 版 PyTorch。Python 环境由仓库根目录的
+uv 项目管理（`PPMP/pyproject.toml` 声明依赖，环境在 `PPMP/.venv`）：
 
 ```bash
 cd PPMP/CH02
-uv run python vecMul.py
+uv run vecMul.py
 ```
 
 ---

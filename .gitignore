@@ -46,3 +46,7 @@ __pycache__/
 
 # Makefile (build config, kept local)
 Makefile
+
+# uv project files (Python env management, kept local)
+PPMP/pyproject.toml
+PPMP/uv.lock
