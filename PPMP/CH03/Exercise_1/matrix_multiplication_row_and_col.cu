@@ -2,14 +2,16 @@
 #include<c10/cuda/CUDAStream.h>
 
 __global__ void matrixMulRowKernel(float* M, float* N, float* P, int size) {
-  int row = blockIdx.y * blockDim.y + threadIdx.y;
+  int row = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (row < size) {
+    for (int col = 0; col < size; ++col) {
       float sum = 0.0f;
       for (int k = 0; k < size; ++k) {
           sum += M[row * size + k] * N[k * size + col];
       }
       P[row * size + col] = sum;
+    }
   }
 }
 
@@ -17,11 +19,13 @@ __global__ void matrixMulColKernel(float* M, float* N, float* P, int size) {
   int col = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (col < size) {
+    for(int row = 0; row < size; ++row) {
       float sum = 0.0f;
       for (int k = 0; k < size; ++k) {
           sum += M[row * size + k] * N[k * size + col];
       }
       P[row * size + col] = sum;
+    }
   }
 }
 
@@ -39,7 +43,7 @@ torch::Tensor matrixRowMul(torch::Tensor M, torch::Tensor N) {
   dim3 dimBlock(16);
   dim3 dimGrid(cdiv(size, dimBlock.x));
 
-  matrixMulRowKernel<<<dimGrid, dimBlock,0,torch::cuda::getCurrrentStream()>>>(M.data_ptr<float>(), N.data_ptr<float>(), P.data_ptr<float>(), size);
+  matrixMulRowKernel<<<dimGrid, dimBlock,0,torch::cuda::getCurrentCUDAStream()>>>(M.data_ptr<float>(), N.data_ptr<float>(), P.data_ptr<float>(), size);
   C10_CUDA_KERNEL_LAUNCH_CHECK();
   return P;
 }
@@ -54,7 +58,7 @@ torch::Tensor matrixColMul(torch::Tensor M, torch::Tensor N) {
   dim3 dimBlock(16);
   dim3 dimGrid(cdiv(size, dimBlock.x));
 
-  matrixMulColKernel<<<dimGrid, dimBlock,0,torch::cuda::getCurrrentStream()>>>(M.data_ptr<float>(), N.data_ptr<float>(), P.data_ptr<float>(), size);
+  matrixMulColKernel<<<dimGrid, dimBlock,0,torch::cuda::getCurrentCUDAStream()>>>(M.data_ptr<float>(), N.data_ptr<float>(), P.data_ptr<float>(), size);
   C10_CUDA_KERNEL_LAUNCH_CHECK();
   return P;
 }
