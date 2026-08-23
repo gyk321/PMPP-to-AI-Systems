@@ -44,6 +44,9 @@ __pycache__/
 # Claude Code local settings
 .claude/
 
+# Gradio app runtime data
+.gradio/
+
 # Makefile (build config, kept local)
 Makefile
 
