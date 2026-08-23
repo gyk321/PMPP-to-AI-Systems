@@ -18,7 +18,9 @@ inline unsigned int cdiv(unsigned int a, unsigned int b) {
     return (a + b - 1) / b;
 }
 
+// 矩阵乘法函数:接收两个输入矩阵 M 和 N，返回它们的乘积 P
 torch::Tensor matrixMul(torch::Tensor M, torch::Tensor N) {
+    // 断言输入矩阵都在 CUDA 设备上，并且数据类型为 float32
     assert(M.device().type() == torch::kCUDA && N.device().type() == torch::kCUDA);
     assert(M.dtype == torch::kFloat32 && N.dtype == torch::kFloat32);
     assert(M.size(1) == N.size(0));

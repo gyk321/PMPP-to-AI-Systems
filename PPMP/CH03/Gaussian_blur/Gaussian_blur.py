@@ -18,6 +18,9 @@ def compile_extension():
 
 def main():
   current_dir = Path(__file__).parent
+
+  # 使用 torchvision.io.read_image 读取经典的测试图 Grace_Hopper.jpg。
+  # 读进来的 img 默认是一个形状为 (C, H, W)、数据类型为 uint8 的 PyTorch 张量。
   img = read_image(current_dir.parent / "Grace_Hopper.jpg").contiguous().cuda()
 
   print("Original:")
