@@ -78,7 +78,9 @@ __global__ void MatrixMulKernel(float *M,float *N,float *P,int m,int n,int o){
   }
 }
 
+// 将大任务拆分成能塞进高速缓存（共享内存）的小块，利用数据的局部性，将全局内存（Global Memory）的“一次加载，一次使用”转变为“一次加载，多次重复使用”
 __global__ void TiledMatrixMulKernel(float *M,float *N,float *P,int m,int n,int o,int tileWidth){
+  // 1. 动态分配高速共享内存
   extern __shared__ float sharedMem[];              // 这表示共享内存的大小不是在编译时固定的，而是在启动内核时动态分配的
   float *Mds = sharedMem;                           // Mds 指向共享内存的开始部分，用于存储 M 的 tile
   float *Nds = &sharedMem[tileWidth * tileWidth];   // Nds 指向共享内存的第二部分，用于存储 N 的 tile
@@ -91,9 +93,11 @@ __global__ void TiledMatrixMulKernel(float *M,float *N,float *P,int m,int n,int 
 
   float Pvalue = 0;
 
+  // 2. 阶段性切分循环
   // 由于 GPU 的共享内存容量有限，无法一次性装下整个矩阵，算法将内维度 $n$ 切分成了多个大小为 tileWidth 的块（Tile）。
   // 循环变量 ph（Phase）表示当前正在处理第几个块。总块数为 (n + tileWidth - 1) / tileWidth（向上取整）。
   for(int ph = 0; ph < (n + tileWidth - 1) / tileWidth; ++ph){
+    // 3. 线程协作搬运数据
     // 协作加载: 线程块内的每个线程负责将全局内存中的一个元素搬运到共享内存 Mds 中
     if(Row < m && (ph * tileWidth + tx) < n){
       Mds[ty * tileWidth + tx] = M[static_cast<size_t>(Row) * n + ph * tileWidth + tx];
@@ -110,6 +114,7 @@ __global__ void TiledMatrixMulKernel(float *M,float *N,float *P,int m,int n,int 
       Nds[ty * tileWidth + tx] = 0.0;
     }
 
+    // 4. 线程同步与局部计算
     __syncthreads();
     // 计算矩阵乘法
     for(int k = 0; k < tileWidth; ++k){
@@ -152,7 +157,7 @@ void matrixMul(float *M,float *N,float *P,int m,int n,int o){
 
 void matrixMulTiling(float *M,float *N,float *P,int m,int n,int o){
   float *d_M,*d_N,*d_P;
-
+  // 程序调用了辅助函数计算当前的最佳分块维度
   int tileWidth = calculateOptimalTileWidth(m,n,o);
 
   size_t size_M = static_cast<size_t>(m) * n * sizeof(float);
@@ -162,7 +167,7 @@ void matrixMulTiling(float *M,float *N,float *P,int m,int n,int o){
   gpuErrchk(cudaMalloc((void**)&d_M,size_M));
   gpuErrchk(cudaMalloc((void**)&d_N,size_N));
   gpuErrchk(cudaMalloc((void**)&d_P,size_P));
-
+  // 将主机（CPU）内存中准备好的输入矩阵 M 和 N，通过 PCIE 总线拷贝到刚才在 GPU 上分配的显存 d_M 和 d_N 中
   gpuErrchk(cudaMemcpy(d_M,M,size_M,cudaMemcpyHostToDevice));
   gpuErrchk(cudaMemcpy(d_N,N,size_N,cudaMemcpyHostToDevice));
 
@@ -238,12 +243,14 @@ void printMatrix(float *matrix,int rows,int cols){
 }
 
 int main(){
-  int m = 2010, n = 3200, o = 9111;
 
+  // 定义矩阵维度与计算元素总数
+  int m = 2010, n = 3200, o = 9111;
   size_t numM = static_cast<size_t>(m) * n;
   size_t numN = static_cast<size_t>(n) * o;
   size_t numP = static_cast<size_t>(m) * o;
 
+  // 使用 new 关键字在主机的堆内存中为输入矩阵 M、N 和两个结果矩阵 P1、P2 分配了一维数组空间
   float *M = new float[numM];
   float *N = new float[numN];
   float *P1 = new float[numP];
@@ -257,6 +264,7 @@ int main(){
     N[i] = static_cast<float>(1.5);
   }
 
+  // 执行基准测试
   float avgTimeMatrixMulTiling = benchmark(matrixMulTiling, M, N, P1, m, n, o);
   float avgTimeMatrixMul = benchmark(matrixMul, M, N, P2, m, n, o);
   bool same = allclose(P1, P2, m, o);
