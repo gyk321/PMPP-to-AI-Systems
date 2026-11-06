@@ -141,29 +141,30 @@ int main(int argc, char **argv)
     for (dev = 0; dev < deviceCount; ++dev) {       // 循环对每块 GPU 进行详细查询
         cudaSetDevice(dev);                         // 激活与获取属性结构体
         cudaDeviceProp deviceProp;
-        cudaGetDeviceProperties(&deviceProp, dev);
+        cudaGetDeviceProperties(&deviceProp, dev);  // 将大部分静态硬件参数填充到 cudaDeviceProp 结构体中
 
         printf("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
 
-        // Console log
-        cudaDriverGetVersion(&driverVersion);
-        cudaRuntimeGetVersion(&runtimeVersion);
+        // Console log  获取驱动版本和运行时版本
+        cudaDriverGetVersion(&driverVersion);       // 获取当前操作系统安装的 NVIDIA 显卡驱动所支持的最高 CUDA 版本
+        cudaRuntimeGetVersion(&runtimeVersion);     // 获取当前系统中安装的 CUDA 运行时版本
         printf("  CUDA Driver Version / Runtime Version          %d.%d / %d.%d\n",
                driverVersion / 1000,
                (driverVersion % 100) / 10,
                runtimeVersion / 1000,
                (runtimeVersion % 100) / 10);
+        // GPU 硬件架构的主版本号和次版本号,即常说的 sm_XX 架构代号，
         printf("  CUDA Capability Major/Minor version number:    %d.%d\n", deviceProp.major, deviceProp.minor);
 
         char msg[256];
-#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)      // 在 Windows 平台（MSVC 编译器）下，调用微软特有的安全函数 sprintf_s
         sprintf_s(msg,
                   sizeof(msg),
                   "  Total amount of global memory:                 %.0f MBytes "
                   "(%llu bytes)\n",
-                  static_cast<float>(deviceProp.totalGlobalMem / 1048576.0f),
-                  (unsigned long long)deviceProp.totalGlobalMem);
-#else
+                  static_cast<float>(deviceProp.totalGlobalMem / 1048576.0f),   // 存储的是显卡全局显存,换算为 MB
+                  (unsigned long long)deviceProp.totalGlobalMem);               // 保留原始字节数
+#else   // 在 Linux / macOS 等其他平台下，调用 C/C++ 标准安全函数 snprintf
         snprintf(msg,
                  sizeof(msg),
                  "  Total amount of global memory:                 %.0f MBytes "
@@ -173,16 +174,17 @@ int main(int argc, char **argv)
 #endif
         printf("%s", msg);
 
+        // 打印 GPU 的多处理器数量和每个多处理器的 CUDA 核心数量
         printf("  (%03d) Multiprocessors, (%03d) CUDA Cores/MP:    %d CUDA Cores\n",
-               deviceProp.multiProcessorCount,
-               _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor),
-               _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor) * deviceProp.multiProcessorCount);
+               deviceProp.multiProcessorCount,                          // 获取 GPU 上流多处理器（简称 SM 或 MP）的数量
+               _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor), // 每个 SM 包含的 CUDA 核心数
+               _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor) * deviceProp.multiProcessorCount);   // 整张显卡的 CUDA 核心总数
         int clockRate;
         checkCudaErrors(cudaDeviceGetAttribute(&clockRate, cudaDevAttrClockRate, dev));
         printf("  GPU Max Clock rate:                            %.0f MHz (%0.2f "
                "GHz)\n",
-               clockRate * 1e-3f,
-               clockRate * 1e-6f);
+               clockRate * 1e-3f,           // 查询并输出 GPU 最大核心频率kHz
+               clockRate * 1e-6f);          // 换算为 GHz
 #if CUDART_VERSION >= 5000
         int memoryClockRate;
 #if CUDART_VERSION >= 13000
@@ -190,11 +192,11 @@ int main(int argc, char **argv)
 #else
         memoryClockRate = deviceProp.memoryClockRate;
 #endif
-        printf("  Memory Clock rate:                             %.0f Mhz\n", memoryClockRate * 1e-3f);
-        printf("  Memory Bus Width:                              %d-bit\n", deviceProp.memoryBusWidth);
+        printf("  Memory Clock rate:                             %.0f Mhz\n", memoryClockRate * 1e-3f);     // 查询并输出 GPU 显存频率 kHz
+        printf("  Memory Bus Width:                              %d-bit\n", deviceProp.memoryBusWidth);     // 查询并输出 GPU 显存总线宽度 bit
 
         if (deviceProp.l2CacheSize) {
-            printf("  L2 Cache Size:                                 %d bytes\n", deviceProp.l2CacheSize);
+            printf("  L2 Cache Size:                                 %d bytes\n", deviceProp.l2CacheSize);  // 查询并输出 GPU L2 缓存大小 bytes
         }
 
 #else
@@ -206,6 +208,7 @@ int main(int argc, char **argv)
         int memBusWidth;
         getCudaAttribute<int>(&memBusWidth, CU_DEVICE_ATTRIBUTE_GLOBAL_MEMORY_BUS_WIDTH, dev);
         printf("  Memory Bus Width:                              %d-bit\n", memBusWidth);
+        // 查询并输出 GPU L2 缓存大小
         int L2CacheSize;
         getCudaAttribute<int>(&L2CacheSize, CU_DEVICE_ATTRIBUTE_L2_CACHE_SIZE, dev);
 
@@ -214,7 +217,8 @@ int main(int argc, char **argv)
         }
 
 #endif
-
+        // 打印 GPU 支持的纹理最大尺寸
+        // 普通纹理：分别输出一维（长度）、二维（宽、高）和三维（宽、高、深）纹理的最大元素数量。
         printf("  Maximum Texture Dimension Size (x,y,z)         1D=(%d), 2D=(%d, "
                "%d), 3D=(%d, %d, %d)\n",
                deviceProp.maxTexture1D,
@@ -223,15 +227,17 @@ int main(int argc, char **argv)
                deviceProp.maxTexture3D[0],
                deviceProp.maxTexture3D[1],
                deviceProp.maxTexture3D[2]);
+        // 分层纹理：由多个相同尺寸的 1D 或 2D 纹理组成的数组。
         printf("  Maximum Layered 1D Texture Size, (num) layers  1D=(%d), %d layers\n",
                deviceProp.maxTexture1DLayered[0],
                deviceProp.maxTexture1DLayered[1]);
+        
         printf("  Maximum Layered 2D Texture Size, (num) layers  2D=(%d, %d), %d "
                "layers\n",
                deviceProp.maxTexture2DLayered[0],
                deviceProp.maxTexture2DLayered[1],
                deviceProp.maxTexture2DLayered[2]);
-
+        printf("  Texture alignment:                             %zu bytes\n", deviceProp.textureAlignment);    // 纹理与表面对齐
         printf("  Total amount of constant memory:               %zu bytes\n", deviceProp.totalConstMem);
         printf("  Total amount of shared memory per block:       %zu bytes\n", deviceProp.sharedMemPerBlock);
         printf("  Total shared memory per multiprocessor:        %zu bytes\n", deviceProp.sharedMemPerMultiprocessor);
