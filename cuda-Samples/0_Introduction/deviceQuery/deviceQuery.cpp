@@ -31,10 +31,57 @@
 // std::system includes
 
 #include <cuda_runtime.h>
-#include <helper_cuda.h>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <string>
+
+// Minimal replacement for the CUDA Samples helper_cuda.h error checker.
+template <typename T>
+void checkCudaErrorsImpl(T result, const char *function, const char *file, int line)
+{
+    if (result != cudaSuccess) {
+        fprintf(stderr,
+                "CUDA error at %s:%d code=%d(%s) \"%s\"\n",
+                file,
+                line,
+                static_cast<int>(result),
+                cudaGetErrorString(static_cast<cudaError_t>(result)),
+                function);
+        exit(EXIT_FAILURE);
+    }
+}
+
+#define checkCudaErrors(call) checkCudaErrorsImpl((call), #call, __FILE__, __LINE__)
+
+// Local replacement for the helper used by the CUDA Samples deviceQuery.
+int _ConvertSMVer2Cores(int major, int minor)
+{
+    switch ((major << 4) + minor) {
+        case 0x20: return 32;
+        case 0x21: return 48;
+        case 0x30:
+        case 0x32:
+        case 0x35:
+        case 0x37: return 192;
+        case 0x50:
+        case 0x52:
+        case 0x53: return 128;
+        case 0x60: return 64;
+        case 0x61:
+        case 0x62: return 128;
+        case 0x70:
+        case 0x72:
+        case 0x75: return 64;
+        case 0x80: return 64;
+        case 0x86:
+        case 0x87:
+        case 0x89:
+        case 0x90: return 128;
+        default: return 0;
+    }
+}
 
 int   *pArgc = NULL;
 char **pArgv = NULL;
@@ -72,9 +119,10 @@ int main(int argc, char **argv)
     printf(" CUDA Device Query (Runtime API) version (CUDART static linking)\n\n");
 
     int         deviceCount = 0;
-    cudaError_t error_id    = cudaGetDeviceCount(&deviceCount);
+    cudaError_t error_id    = cudaGetDeviceCount(&deviceCount);     // 获取系统中可用的 GPU 数量
 
     if (error_id != cudaSuccess) {
+        // 打印具体错误信息并退出
         printf("cudaGetDeviceCount returned %d\n-> %s\n", static_cast<int>(error_id), cudaGetErrorString(error_id));
         printf("Result = FAIL\n");
         exit(EXIT_FAILURE);
@@ -90,8 +138,8 @@ int main(int argc, char **argv)
 
     int dev, driverVersion = 0, runtimeVersion = 0;
 
-    for (dev = 0; dev < deviceCount; ++dev) {
-        cudaSetDevice(dev);
+    for (dev = 0; dev < deviceCount; ++dev) {       // 循环对每块 GPU 进行详细查询
+        cudaSetDevice(dev);                         // 激活与获取属性结构体
         cudaDeviceProp deviceProp;
         cudaGetDeviceProperties(&deviceProp, dev);
 

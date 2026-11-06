@@ -11,6 +11,9 @@
 *.cu.o
 *.d
 
+# CUDA Samples compiled executables
+cuda-Samples/0_Introduction/deviceQuery/deviceQuery
+
 # Build directories
 build/
 bin/
